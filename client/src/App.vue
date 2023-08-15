@@ -8,6 +8,8 @@ import { RouterView } from 'vue-router';
 
 <style>
 body{
-	background-color: rgb(1, 1, 1);
+	background-color: rgb(30, 30, 30);
+	width: 100vw;
+	height: 100vh;
 }
 </style>

@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import unnamed from "../assets/unnamed.png";
+import { onMounted, reactive, ref } from "vue";
+import { GET } from "./common.ts";
 
 class Squad {
-	rank: string;
 	img: any;
 	squadName: string;
 	wwcd: number = 0;
@@ -11,25 +10,31 @@ class Squad {
 	fin: number = 0;
 	points: number = 0;
 
-	constructor(squadName: string, rank: number, img: any) {
+	constructor(squadName: string, img: any) {
 		this.squadName = squadName;
-		if(rank < 10) {
-			this.rank = "0" + rank;
-		} else {
-			this.rank = rank.toString();
-		}
 		this.img = img;
 	}
 }
 
 const squads = ref<Array<Squad>>([]);
 
-onMounted(() => {
-	let s = [...squads.value];
-	for(let i = 1; i < 20; i++) {
-		s.push(new Squad("Squad Number " + i, i, unnamed));
-	}
-	squads.value = s;
+const selectedSquad = reactive<{rank: number, squad: Squad | null}>({
+	rank: -1,
+	squad: null
+});
+const msg = ref("");
+
+function selectTeam(idx: number) {
+	selectedSquad.squad = squads.value[idx];
+	selectedSquad.rank = idx + 1;
+}
+
+// async function saveToServer() {
+// 	await POST("/save-squads", squads.value, msg);
+// }
+
+onMounted(async () => {
+	squads.value = await GET("/squads", msg);
 });
 </script>
 
@@ -46,8 +51,8 @@ onMounted(() => {
 			</div>
 		</div>
 		<div id="points-table">
-			<div class="points-table-row" v-for="squad in squads">
-				<div class="rank">{{squad.rank}}</div>
+			<div class="points-table-row" @click="selectTeam(index)" v-for="(squad, index) in squads">
+				<div class="rank">{{index + 1}}</div>
 				<div class="image-container">
 					<img :src="squad.img" alt="" />
 				</div>
@@ -56,6 +61,24 @@ onMounted(() => {
 				<div class="pla-pts">{{squad.pla}}</div>
 				<div class="fin">{{squad.fin}}</div>
 				<div class="points">{{squad.points}}</div>
+			</div>
+		</div>
+	</section>
+
+	<section v-if="selectedSquad.rank !== -1" class="selected-section">
+		<div class="selected-team">
+			<div class="points-table-row">
+				<div class="rank">
+					{{selectedSquad.rank}}
+				</div>
+				<div class="image-container">
+					<img :src="selectedSquad.squad?.img" alt="" />
+				</div>
+				<div class="squad-name">{{selectedSquad.squad?.squadName}}</div>
+				<div class="wwcd">x{{selectedSquad.squad?.wwcd}}</div>
+				<div class="pla-pts">{{selectedSquad.squad?.pla}}</div>
+				<div class="fin">{{selectedSquad.squad?.fin}}</div>
+				<div class="points">{{selectedSquad.squad?.points}}</div>
 			</div>
 		</div>
 	</section>
@@ -112,11 +135,11 @@ onMounted(() => {
 	align-items: center;
 }
 
-.points-table-row > .image-container > img {
+.image-container img {
 	padding: 10%;
 }
 
-.points-table-row > .image-container > img {
+.image-container img {
 	width: 100%;
 	height: 100%;
 	object-fit: contain;
@@ -127,6 +150,20 @@ onMounted(() => {
 	height: 100%;
 	justify-content: flex-start;
 	padding-left: 1rem;
+}
+
+.selected-section{
+	background-color: white;
+}
+
+.selected-team{
+	display: flex;
+	margin-top: 1rem;
+	width: 60rem;
+}
+
+.selected-team .team{
+	background-color: rgb(20, 20, 20);
 }
 
 </style>
