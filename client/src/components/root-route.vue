@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router';
+import { socket } from "../socket.ts";
+import { onMounted } from 'vue';
+
+onMounted(() => {
+	socket.emit("man", "man man");
+})
 </script>
 
 <template>
@@ -12,6 +18,16 @@ import { RouterLink } from 'vue-router';
 	<div>
 		<router-link to="/final-table">
 			<button>final table</button>
+		</router-link>
+	</div>
+	<div>
+		<router-link to="/client/kills-table">
+			<button>client kills table</button>
+		</router-link>
+	</div>
+	<div>
+		<router-link to="/client/final-table">
+			<button>client final table</button>
 		</router-link>
 	</div>
 	<div>

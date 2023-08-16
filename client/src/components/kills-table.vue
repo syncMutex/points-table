@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { POST, GET } from "./common.ts";
+import { ref, onMounted, onUnmounted } from "vue";
+import { socket } from "../socket.ts";
 
 class Squad {
 	img: any;
@@ -18,59 +18,65 @@ class Squad {
 			this.alive--;
 		}
 	}
+}
 
-	unkill() {
-		if(this.alive < 4) {
-			this.alive++;
-		}
-	}
+interface S {
+	rank: number, sq: null | Squad
 }
 
 const squads = ref<Array<Squad>>(new Array(0));
-const sqIdx = ref(-1);
-const selectedSquad = ref<null | Squad>(null);
-const msg = ref('');
-const btns = ref<Array<{name: string, point: number}>>([]);
-const btnName = ref('');
-const btnPoints = ref(0);
+const selected = ref<[S, S]>([{ rank:-1, sq: null }, { rank:-1, sq: null }]);
+const curSel = ref(0);
+const autoClear = ref(true);
 
 function selectTeam(idx: number) {
-	sqIdx.value = idx;
-	reset();
+	if(curSel.value === -1) return;
+	selected.value[curSel.value].rank = idx + 1;
+	selected.value[curSel.value].sq = squads.value[idx];
+
+	if(selected.value[0].rank === -1) curSel.value = 0;
+	else if(selected.value[1].rank === -1) curSel.value = 1;
+	else curSel.value = -1;
 }
 
-function update() {
-	if(selectedSquad !== null)
-		squads.value[sqIdx.value] = {...selectedSquad.value} as Squad;
+function clear() {
+	curSel.value = 0;
+	selected.value = selected.value.map(_ => ({ rank: -1, sq: null } as S)) as [S, S];
 }
 
-function addBtn() {
-	btns.value.push({ name: btnName.value, point: btnPoints.value });
-	btnPoints.value = 0;
-	btnName.value = '';
-}
-
-function addPoints(point: number) {
-	if(selectedSquad.value !== null) {
-		selectedSquad.value.points += point;
+function kill() {
+	if(selected.value[0].rank === -1 || selected.value[1].rank === -1) return;
+	socket.emit("kill", selected.value[0].rank - 1, selected.value[1].rank - 1);
+	selected.value[1].sq?.kill();
+	if(selected.value[0].sq !== null) {
+		selected.value[0].sq.points += 1;
 	}
+	if(autoClear.value) {
+		clear();
+	}
+	squads.value.sort((a, b) => b.points - a.points);
 }
 
 function reset() {
-	const s = squads.value[sqIdx.value];
-	selectedSquad.value = new Squad(s.squadName, s.img);
-	selectedSquad.value.points = s.points;
-	selectedSquad.value.alive = s.alive;
-}
-
-async function saveBtnsToServer() {
-	await POST('/save-btns', btns.value, msg);
+	socket.emit('reset-kills-table');
+	socket.emit('get-kills-table');
 }
 
 onMounted(async () => {
-	squads.value = (await GET("/squads", msg)).map((s: any) => new Squad(s.squadName, s.img));
-	btns.value = await GET("/btns", msg);
+	socket.on('get-kills-table-res', table => {
+		squads.value = table.map((s:Squad) => {
+			let a = new Squad(s.squadName, s.img);
+			a.alive = s.alive;
+			a.points = s.points;
+			return a;
+		});
+	})
+	socket.emit('get-kills-table');
 });
+
+onUnmounted(() => {
+	socket.off('get-kills-table-res');
+})
 </script>
 
 <template>
@@ -91,67 +97,38 @@ onMounted(async () => {
 		</div>
 	</section>
 
-	<section id="input-section" v-if="selectedSquad !== null">
-		<button @click="update">update</button>
-		<button @click="reset">reset</button>
-		<button @click="() => {
-			selectedSquad = null;
-			sqIdx = -1;
-		}">close</button>
-		<div class="selected-team">
+	<section id="input-section">
+		<button @click="clear">clear</button>
+
+		<span style="margin-left: 1rem">autoclear: </span><input type="checkbox" v-model="autoClear">
+		<div :class="['selected-team', curSel === 0 ? 'highlight' : '']" @click="() => curSel = 0">
 			<div class="team">
-				<div class="rank">#{{sqIdx + 1}}</div>
-				<div class="img-container"><img :src="selectedSquad.img" alt=""></div>
-				<div class="squad-name">{{selectedSquad.squadName}}</div>
-				<div class="points">{{selectedSquad.points}}</div>
+				<div class="rank">#{{selected[0].rank}}</div>
+				<div class="img-container"><img :src="selected[0].sq?.img" alt=""></div>
+				<div class="squad-name">{{selected[0].sq?.squadName}}</div>
+				<div class="points">{{selected[0].sq?.points}}</div>
 				<div class="alive-states">
-					<div v-for="i in 4" :class="['dead-box', (i <= selectedSquad.alive) ? 'alive' : '']"></div>
+					<div v-for="i in 4" :class="['dead-box', (i <= (selected[0].sq?.alive || 0)) ? 'alive' : '']"></div>
 				</div>
 			</div>
 		</div>
-
 		<div class="control-btns">
-			<button style="color: white; background-color: red; width: 6rem; height: 2rem;" @click="selectedSquad.kill">kill</button>
-			<button style="background-color: rgb(0, 255, 0); width: 6rem; height: 2rem;" @click="selectedSquad.unkill">unkill</button>
-			<br />
-			<div class="btns-list">
-				<div v-for="btn in btns" @click="addPoints(btn.point)">
-					<span>{{btn.name}}</span>
-					<span>points: {{btn.point}}</span>
+			<button :disabled="selected[0].rank === -1 || selected[1].rank === -1"
+				style="color: white; width: 6rem; height: 2rem;" @click="kill">killed</button>
+		</div>
+		<div :class="['selected-team', curSel === 1 ? 'highlight' : '']" @click="() => curSel = 1">
+			<div class="team">
+				<div class="rank">#{{selected[1].rank}}</div>
+				<div class="img-container"><img :src="selected[1].sq?.img" alt=""></div>
+				<div class="squad-name">{{selected[1].sq?.squadName}}</div>
+				<div class="points">{{selected[1].sq?.points}}</div>
+				<div class="alive-states">
+					<div v-for="i in 4" :class="['dead-box', (i <= (selected[1].sq?.alive || 0)) ? 'alive' : '']"></div>
 				</div>
 			</div>
 		</div>
-	</section>
 
-	<section class="new-btn-section" v-if="selectedSquad !== null">
-		<div class="new-btn-container">
-			<h2>new button</h2>
-			<div>
-				<span>name: </span>
-				<input type="text" v-model="btnName" />
-			</div>
-			<div>
-				<span>points: </span>
-				<input type="number" v-model="btnPoints"/>
-			</div>
-			<div>
-				<button :disabled="btnName.trim() === ''" @click="addBtn">add</button>
-			</div>
-			<div>
-				<button @click="saveBtnsToServer">save to server</button>
-			</div>
-
-			<br/>
-			<h2>list</h2>
-			<div class="btns-list-to-delete">
-				<div v-for="(btn, idx) in btns">
-					<button>{{btn.name}}</button>
-					<button class="delete-btn" @click="() => {
-						btns.splice(idx, 1);
-					}">delete</button>
-				</div>
-			</div>
-		</div>
+		<div><button @click="reset">reset</button></div>
 	</section>
 </div>
 </template>
@@ -281,6 +258,11 @@ button{
 .selected-team{
 	display: flex;
 	margin-top: 1rem;
+	padding: 0.3rem;
+}
+
+.highlight{
+	background-color: blue;
 }
 
 .selected-team .team{
@@ -294,52 +276,12 @@ button{
 
 .control-btns button{
 	cursor: pointer;
+	background-color: red; 
 }
 
-.new-btn-section{
-	width: 16rem;
-	height: max-content;
-}
-
-.new-btn-container > div{
-	margin-top: 1rem;
-}
-
-.btns-list{
-	margin-top: 1rem;
-	display: flex;
-	flex-direction: column;
-}
-
-.btns-list > div{
-	margin-top: 0.5rem;
-	width: 100%;
-	display: flex;
-	flex-direction: row;
-	justify-content: space-around;
-	background-color: grey;
-	color: white;
-	padding: 0.5rem 0;
-	cursor: pointer;
-}
-
-.btns-list-to-delete{
-	display: flex;
-	flex-direction: column;
-}
-
-.btns-list-to-delete > div{
-	margin-top: 0.2rem;
-}
-
-.btns-list-to-delete > div > button:first-child{
+.control-btns button:disabled{
 	pointer-events: none;
-}
-
-.delete-btn{
-	background-color: red;
-	color: white;
-	cursor: pointer;
+	background-color: grey; 
 }
 </style>
 
