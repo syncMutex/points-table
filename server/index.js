@@ -6,7 +6,8 @@ const PORT = process.env.PORT || 5000;
 const app = express();
 const server = require("http").createServer(app);
 const root = require('./routes/root');
-const { init, unInit } = require('./files.js');
+const { init } = require('./files.js');
+init();
 
 app.use(cors());
 app.use(bodyParser.json({limit: "200mb"}));
@@ -21,7 +22,6 @@ io.on('connection', socket => {
 	socketActions(io, socket);
 })
 
-init();
 
 app.use('/api', root);
 

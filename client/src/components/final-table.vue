@@ -6,7 +6,6 @@ class Squad {
 	img: any;
 	squadName: string;
 	wwcd: number = 0;
-	pla: number = 0;
 	fin: number = 0;
 	points: number = 0;
 
@@ -45,7 +44,6 @@ onMounted(async () => {
 				<div class="rank">Rank</div>
 				<div class="squad-name">Team Name</div>
 				<div class="wwcd">wwcd</div>
-				<div class="pla-pts">pla. pts</div>
 				<div class="fin">fin</div>
 				<div class="points">points</div>
 			</div>
@@ -58,7 +56,6 @@ onMounted(async () => {
 				</div>
 				<div class="squad-name">{{squad.squadName}}</div>
 				<div class="wwcd">x{{squad.wwcd}}</div>
-				<div class="pla-pts">{{squad.pla}}</div>
 				<div class="fin">{{squad.fin}}</div>
 				<div class="points">{{squad.points}}</div>
 			</div>
@@ -76,7 +73,6 @@ onMounted(async () => {
 				</div>
 				<div class="squad-name">{{selectedSquad.squad?.squadName}}</div>
 				<div class="wwcd">x{{selectedSquad.squad?.wwcd}}</div>
-				<div class="pla-pts">{{selectedSquad.squad?.pla}}</div>
 				<div class="fin">{{selectedSquad.squad?.fin}}</div>
 				<div class="points">{{selectedSquad.squad?.points}}</div>
 			</div>
