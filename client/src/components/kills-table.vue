@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import { socket } from "../socket.ts";
+import banner from "../assets/banner.jpg";
 
 class Squad {
 	img: any;
@@ -83,12 +84,15 @@ onUnmounted(() => {
 <div class="whole-page">
 	<section id="kill-section">
 		<div class="header">
+			<img :src="banner" alt="">
 		</div>
 		<div class="teams">
 			<div class="team" v-for="(squad, index) in squads" @click="selectTeam(index)" :key="index">
 				<div class="rank">#{{index + 1}}</div>
-				<div class="img-container"><img :src="squad.img" alt=""></div>
-				<div class="squad-name">{{squad.squadName}}</div>
+				<div class="name-img">
+					<div class="img-container"><img :src="squad.img" alt=""></div>
+					<div class="squad-name">{{squad.squadName}}</div>
+				</div>
 				<div class="points">{{squad.points}}</div>
 				<div class="alive-states">
 					<div v-for="i in 4" :class="['dead-box', (i <= squad.alive) ? 'alive' : '']"></div>
@@ -134,6 +138,15 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+@font-face {
+  font-family: "agency";
+  src: url('../assets/agency.ttf');
+}
+
+*{
+	font-family: agency;
+}
+
 input[type="text"]{
 	height: 1.5rem;
 	width: 10rem;
@@ -158,12 +171,27 @@ button{
 	background-color: rgb(50, 50, 50);
 	overflow: hidden;
 	font-family: Verdana, Geneva, Tahoma, sans-serif;
+	border-left: 5px solid yellow;
+}
+
+.name-img{
+	background-color: rgb(240, 240, 240);
+	display: flex;
+	flex-direction: row;
+	width: 7rem;
+	padding: 0.2rem;
 }
 
 .header {
 	width: 100%;
 	height: 5rem;
 	background-color: rgb(20, 20, 20);
+}
+
+.header img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
 }
 	
 .teams{
@@ -172,6 +200,7 @@ button{
 	display: flex;
 	flex-direction: column;
 	overflow: auto;
+	background: linear-gradient(to right, rgb(27, 27, 27), rgb(0, 0, 0));
 }
 
 .teams::-webkit-scrollbar{
@@ -205,7 +234,7 @@ button{
 }
 
 .rank{
-	width: 2.5rem;
+	width: 2rem;
 	margin-left: 0.2rem;
 	color: yellow;
 }
@@ -213,6 +242,8 @@ button{
 .squad-name{
 	width: 30%;
 	margin-left: 0.5rem;
+	color: black;
+	font-size: 1.2rem;
 }
 
 .points{
@@ -243,7 +274,7 @@ button{
 }
 
 .alive{
-	background-color: rgb(0, 255, 0);
+	background-color: rgb(242, 255, 0);
 	border: none;
 }
 
