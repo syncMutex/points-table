@@ -1,13 +1,22 @@
-import { Ref } from "vue";
+import { Ref, ref } from "vue";
 
-const SERVER_ADDR = "http://localhost:5000/api";
+if(window.localStorage.getItem("host") === null) {
+	window.localStorage.setItem("host", "localhost");
+}
 
-function makeURL(url: string): string {
-	return `${SERVER_ADDR}${url}`;
+export const HOST = ref(window.localStorage.getItem("host") || "localhost");
+
+export function changeHost(host:string) {
+	HOST.value = host;
+	window.localStorage.setItem("host", HOST.value);
+}
+
+export function U(url: string): string {
+	return `http://${HOST.value}:5000${url}`;
 }
 
 export async function POST(url: string, body: any, msg?: Ref<any>) {
-	const a = await fetch(makeURL(url), {
+	const a = await fetch(U(url), {
 		method: "POST",
 		headers: { 'Content-Type': "application/json" },
 		body: JSON.stringify(body)
@@ -19,7 +28,7 @@ export async function POST(url: string, body: any, msg?: Ref<any>) {
 
 export async function GET(url: string, msg?: Ref<any>) {
 	try{
-		const res = await fetch(makeURL(url), {
+		const res = await fetch(U(url), {
 			method: "GET",
 			headers: { 'Content-Type': "application/json" }
 		});

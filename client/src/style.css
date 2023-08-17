@@ -1,8 +1,15 @@
+@font-face {
+  font-family: "agency";
+  src: url('assets/agency.ttf');
+}
+
 *, *::after, *::before {
 	margin: 0;
 	padding: 0;
 	box-sizing: border-box;
 	user-select: none;
+	font-family: agency;
+	font-size: 1rem;
 }
 
 #app{

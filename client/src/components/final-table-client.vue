@@ -30,11 +30,11 @@ function selectTeam(idx: number) {
 }
 
 // async function saveToServer() {
-// 	await POST("/save-squads", squads.value, msg);
+// 	await POST("/api/save-squads", squads.value, msg);
 // }
 
 onMounted(async () => {
-	squads.value = await GET("/squads", msg);
+	squads.value = await GET("/api/squads", msg);
 });
 </script>
 

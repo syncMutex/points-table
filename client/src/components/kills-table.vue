@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { socket } from "../socket.ts";
 import banner from "../assets/banner.jpg";
 
@@ -26,6 +26,10 @@ interface S {
 }
 
 const squads = ref<Array<Squad>>(new Array(0));
+const deadSquads = computed<Array<Squad>>(() => {
+	const a = squads.value.filter(s => s.alive <= 0);
+	return a;
+});
 const selected = ref<[S, S]>([{ rank:-1, sq: null }, { rank:-1, sq: null }]);
 const curSel = ref(0);
 const autoClear = ref(true);
@@ -87,9 +91,24 @@ onUnmounted(() => {
 			<img :src="banner" alt="">
 		</div>
 		<div class="teams">
-			<div class="team" v-for="(squad, index) in squads" @click="selectTeam(index)" :key="index">
+			<div 
+				:class="['team', squad.alive <= 0 ? 'display-none' : '']" 
+				v-for="(squad, index) in squads" @click="selectTeam(index)" :key="index"
+			>
 				<div class="rank">#{{index + 1}}</div>
-				<div class="name-img">
+				<div :class="['name-img']">
+					<div class="img-container"><img :src="squad.img" alt=""></div>
+					<div class="squad-name">{{squad.squadName}}</div>
+				</div>
+				<div class="points">{{squad.points}}</div>
+				<div class="alive-states">
+					<div v-for="i in 4" :class="['dead-box', (i <= squad.alive) ? 'alive' : '']"></div>
+				</div>
+			</div>
+
+			<div class="team eliminated" v-for="(squad, index) in deadSquads" :key="index">
+				<div class="rank">#{{index + 1}}</div>
+				<div class='name-img'>
 					<div class="img-container"><img :src="squad.img" alt=""></div>
 					<div class="squad-name">{{squad.squadName}}</div>
 				</div>
@@ -138,15 +157,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-@font-face {
-  font-family: "agency";
-  src: url('../assets/agency.ttf');
-}
-
-*{
-	font-family: agency;
-}
-
 input[type="text"]{
 	height: 1.5rem;
 	width: 10rem;
@@ -157,6 +167,10 @@ button{
 	padding: 0 1rem;
 	font-size: 0.9rem;
 	margin-left: 1rem;
+}
+
+.display-none{
+	display: none !important;
 }
 
 .whole-page {
@@ -175,11 +189,16 @@ button{
 }
 
 .name-img{
-	background-color: rgb(240, 240, 240);
+	background-color: rgb(255, 255, 255);
 	display: flex;
 	flex-direction: row;
 	width: 7rem;
 	padding: 0.2rem;
+}
+
+.eliminated{
+	opacity: 0.5;
+	transition: 0.5s all;
 }
 
 .header {
@@ -290,6 +309,10 @@ button{
 	display: flex;
 	margin-top: 1rem;
 	padding: 0.3rem;
+}
+
+.selected-team .team .squad-name{
+	color: white;
 }
 
 .highlight{

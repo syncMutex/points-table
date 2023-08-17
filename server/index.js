@@ -14,7 +14,7 @@ app.use(bodyParser.json({limit: "200mb"}));
 
 const io = require("socket.io")(server, {
 	maxHttpBufferSize: 1e8,
-	cors: { origin: "http://localhost:5173" }
+	cors: { origin: "*" }
 });
 const socketActions = require("./socket-actions.js");
 
