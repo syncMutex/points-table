@@ -33,6 +33,8 @@ const deadSquads = computed<Array<Squad>>(() => {
 const selected = ref<[S, S]>([{ rank:-1, sq: null }, { rank:-1, sq: null }]);
 const curSel = ref(0);
 const autoClear = ref(true);
+const eliminated = ref({rank: -1, squadName: '', kills: -1, finalPoints: -1});
+const isShow = ref(false);
 
 function selectTeam(idx: number) {
 	if(curSel.value === -1) return;
@@ -49,12 +51,25 @@ function clear() {
 	selected.value = selected.value.map(_ => ({ rank: -1, sq: null } as S)) as [S, S];
 }
 
+function showEliminated(s: { rank: number, squadName: string, kills: number, finalPoints: number }) {
+	eliminated.value = s;
+	isShow.value = true;
+	setTimeout(() => {
+		isShow.value = false;
+		setTimeout(() => {
+			eliminated.value = {rank: -1, squadName: '', kills: -1, finalPoints: -1};
+		}, 500);
+	}, 5000);
+}
+
 function kill() {
 	if(selected.value[0].rank === -1 || selected.value[1].rank === -1) return;
 	socket.emit("kill", selected.value[0].rank - 1, selected.value[1].rank - 1);
 	selected.value[1].sq?.kill();
-	if(selected.value[0].sq !== null) {
-		selected.value[0].sq.points += 1;
+	if(selected.value[0].sq !== null && selected.value[1].sq !== null) {
+		if(selected.value[0].rank !== selected.value[1].rank) {
+			selected.value[0].sq.points += 1;
+		}
 	}
 	if(autoClear.value) {
 		clear();
@@ -77,10 +92,15 @@ onMounted(async () => {
 		});
 	})
 	socket.emit('get-kills-table');
+
+	socket.on('eliminated', (rank: number, squadName: string, kills: number, finalPoints: number) => {
+		showEliminated({rank, squadName, kills, finalPoints});
+	});
 });
 
 onUnmounted(() => {
 	socket.off('get-kills-table-res');
+	socket.off('eliminated');
 })
 </script>
 
@@ -107,7 +127,7 @@ onUnmounted(() => {
 			</div>
 
 			<div class="team eliminated" v-for="(squad, index) in deadSquads" :key="index">
-				<div class="rank">#{{index + 1}}</div>
+				<div class="rank">#{{index + 1 + squads.length - deadSquads.length}}</div>
 				<div class='name-img'>
 					<div class="img-container"><img :src="squad.img" alt=""></div>
 					<div class="squad-name">{{squad.squadName}}</div>
@@ -120,39 +140,59 @@ onUnmounted(() => {
 		</div>
 	</section>
 
-	<section id="input-section">
-		<button @click="clear">clear</button>
+	<div>
+		<section id="input-section">
+			<button @click="clear">clear</button>
 
-		<span style="margin-left: 1rem">autoclear: </span><input type="checkbox" v-model="autoClear">
-		<div :class="['selected-team', curSel === 0 ? 'highlight' : '']" @click="() => curSel = 0">
-			<div class="team">
-				<div class="rank">#{{selected[0].rank}}</div>
-				<div class="img-container"><img :src="selected[0].sq?.img" alt=""></div>
-				<div class="squad-name">{{selected[0].sq?.squadName}}</div>
-				<div class="points">{{selected[0].sq?.points}}</div>
-				<div class="alive-states">
-					<div v-for="i in 4" :class="['dead-box', (i <= (selected[0].sq?.alive || 0)) ? 'alive' : '']"></div>
+			<span style="margin-left: 1rem">autoclear: </span><input type="checkbox" v-model="autoClear">
+			<div :class="['selected-team', curSel === 0 ? 'highlight' : '']" @click="() => {
+				curSel = 0;
+				selected[0].rank = -1;
+				selected[0].sq = null;
+			}">
+				<div class="team">
+					<div class="rank">#{{selected[0].rank}}</div>
+					<div class="img-container"><img :src="selected[0].sq?.img" alt=""></div>
+					<div class="squad-name">{{selected[0].sq?.squadName}}</div>
+					<div class="points">{{selected[0].sq?.points}}</div>
+					<div class="alive-states">
+						<div v-for="i in 4" :class="['dead-box', (i <= (selected[0].sq?.alive || 0)) ? 'alive' : '']"></div>
+					</div>
 				</div>
 			</div>
-		</div>
-		<div class="control-btns">
-			<button :disabled="selected[0].rank === -1 || selected[1].rank === -1"
-				style="color: white; width: 6rem; height: 2rem;" @click="kill">killed</button>
-		</div>
-		<div :class="['selected-team', curSel === 1 ? 'highlight' : '']" @click="() => curSel = 1">
-			<div class="team">
-				<div class="rank">#{{selected[1].rank}}</div>
-				<div class="img-container"><img :src="selected[1].sq?.img" alt=""></div>
-				<div class="squad-name">{{selected[1].sq?.squadName}}</div>
-				<div class="points">{{selected[1].sq?.points}}</div>
-				<div class="alive-states">
-					<div v-for="i in 4" :class="['dead-box', (i <= (selected[1].sq?.alive || 0)) ? 'alive' : '']"></div>
+			<div class="control-btns">
+				<button :disabled="selected[0].rank === -1 || selected[1].rank === -1"
+					style="color: white; width: 6rem; height: 2rem;" @click="kill">killed</button>
+			</div>
+			<div :class="['selected-team', curSel === 1 ? 'highlight' : '']" @click="() => {
+				curSel = 1;
+				selected[1].rank = -1;
+				selected[1].sq = null;
+			}">
+				<div class="team">
+					<div class="rank">#{{selected[1].rank}}</div>
+					<div class="img-container"><img :src="selected[1].sq?.img" alt=""></div>
+					<div class="squad-name">{{selected[1].sq?.squadName}}</div>
+					<div class="points">{{selected[1].sq?.points}}</div>
+					<div class="alive-states">
+						<div v-for="i in 4" :class="['dead-box', (i <= (selected[1].sq?.alive || 0)) ? 'alive' : '']"></div>
+					</div>
 				</div>
 			</div>
-		</div>
 
-		<div><button @click="reset">reset</button></div>
-	</section>
+			<div><button @click="reset">reset</button></div>
+		</section>
+
+		<div class="eliminated-box">
+			<div :class="['eliminated-container', isShow ? 'show' : '']">
+				Eliminated
+				<div>{{eliminated.squadName}}</div>
+				<div>rank: {{eliminated.rank}}</div>
+				<div>points: {{eliminated.finalPoints}}</div>
+				<div>finishes: {{eliminated.kills}}</div>
+			</div>
+		</div>
+	</div>
 </div>
 </template>
 
@@ -336,6 +376,30 @@ button{
 .control-btns button:disabled{
 	pointer-events: none;
 	background-color: grey; 
+}
+
+.eliminated-box{
+	width: 15rem;
+	height: 8rem;
+	background-color: rgb(0, 255, 0);
+	margin: 2rem 0 0 3rem;
+}
+
+.eliminated-container{
+	background-color: black;
+	width: 100%;
+	height: 100%;
+	color: white;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	opacity: 0;
+	transition: all 0.3s;
+}
+
+.eliminated-container.show{
+	opacity: 1;
 }
 </style>
 

@@ -1,7 +1,8 @@
 import { io } from 'socket.io-client';
 import { ref } from 'vue';
+import { HOST } from './components/common';
 
-export let socket = io('http://localhost:5000', {});
+export let socket = io(`http://${HOST.value}:5000`, {});
 export const isConnected = ref(false);
 
 function events() {

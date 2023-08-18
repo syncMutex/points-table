@@ -9,12 +9,17 @@ const root = require('./routes/root');
 const { init } = require('./files.js');
 init();
 
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(bodyParser.json({limit: "200mb"}));
 
 const io = require("socket.io")(server, {
 	maxHttpBufferSize: 1e8,
-	cors: { origin: "*" }
+	cors: {
+		origin: "*",
+		methods: ["GET", "POST"],
+		transports: ['websocket', 'polling'],
+		credentials: true
+	}
 });
 const socketActions = require("./socket-actions.js");
 

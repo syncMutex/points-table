@@ -26,13 +26,26 @@ const deadSquads = computed<Array<Squad>>(() => {
 	const a = squads.value.filter(s => s.alive <= 0);
 	return a;
 });
+const eliminated = ref({rank: -1, squadName: '', kills: -1, finalPoints: -1});
+const isShow = ref(false);
 
-
+function showEliminated(s: { rank: number, squadName: string, kills: number, finalPoints: number }) {
+	eliminated.value = s;
+	isShow.value = true;
+	setTimeout(() => {
+		isShow.value = false;
+		setTimeout(() => {
+			eliminated.value = {rank: -1, squadName: '', kills: -1, finalPoints: -1};
+		}, 500);
+	}, 5000);
+}
 
 onMounted(async () => {
 	socket.on('kill', (killerIdx: number, victimIdx: number) => {
 		squads.value[victimIdx].kill();
-		squads.value[killerIdx].points += 1;
+		if(killerIdx !== victimIdx) {
+			squads.value[killerIdx].points += 1;
+		}
 		squads.value.sort((a, b) => b.points - a.points);
 	})
 
@@ -45,9 +58,13 @@ onMounted(async () => {
 		});
 	});
 	socket.emit('get-kills-table');
+	socket.on('eliminated', (rank: number, squadName: string, kills: number, finalPoints: number) => {
+		showEliminated({rank, squadName, kills, finalPoints});
+	});
 });
 
 onUnmounted(() => {
+	socket.off('eliminated');
 	socket.off('kill');
 	socket.off('unkill');
 	socket.off('get-kills-table-res');
@@ -88,6 +105,17 @@ onUnmounted(() => {
 			</div>
 		</div>
 	</section>
+	<div>
+		<div class="eliminated-box">
+			<div :class="['eliminated-container', isShow ? 'show' : '']">
+				Eliminated
+				<div>{{eliminated.squadName}}</div>
+				<div>rank: {{eliminated.rank}}</div>
+				<div>points: {{eliminated.finalPoints}}</div>
+				<div>finishes: {{eliminated.kills}}</div>
+			</div>
+		</div>
+	</div>
 </div>
 </template>
 
@@ -230,6 +258,30 @@ button{
 .alive{
 	background-color: rgb(242, 255, 0);
 	border: none;
+}
+
+.eliminated-box{
+	width: 15rem;
+	height: 8rem;
+	background-color: rgb(0, 255, 0);
+	margin: 2rem 0 0 3rem;
+}
+
+.eliminated-container{
+	background-color: black;
+	width: 100%;
+	height: 100%;
+	color: white;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	opacity: 0;
+	transition: all 0.3s;
+}
+
+.eliminated-container.show{
+	opacity: 1;
 }
 </style>
 

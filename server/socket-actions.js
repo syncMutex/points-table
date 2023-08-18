@@ -48,9 +48,11 @@ function actions(io, socket) {
 		socket.to('kills').emit('kill', killerIdx, victimIdx);
 
 		const idx = killTableToFinalTableIdx(killerIdx);
-		killsTable[killerIdx].points += 1;
-		finalTable[idx].points += 1;
-		finalTable[idx].fin += 1;
+		if(killerIdx !== victimIdx) {
+			killsTable[killerIdx].points += 1;
+			finalTable[idx].points += 1;
+			finalTable[idx].fin += 1;
+		}
 		killsTable[victimIdx].alive -= 1;
 
 		if(killsTable[victimIdx].alive === 0) {
@@ -62,6 +64,13 @@ function actions(io, socket) {
 				finalTable[idx].points += positionPoints[killerIdx + 1];
 				finalTable[idx].wwcd += 1;
 			}
+
+			finalTable.sort((a, b) => b.points - a.points);
+			let rank = killTableToFinalTableIdx(victimIdx) + 1;
+			let squadName = killsTable[victimIdx].squadName;
+			let kills = killsTable[victimIdx].points;
+			let finalPoints = finalTable[rank - 1].points;
+			io.to('kills').emit('eliminated', rank, squadName, kills, finalPoints);
 		}
 
 		killsTable.sort((a, b) => b.points - a.points);
