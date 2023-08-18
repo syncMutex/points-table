@@ -26,6 +26,11 @@ function change() {
 		</router-link>
 	</div>
 	<div>
+		<router-link to="/client/standings">
+			<button>today standings</button>
+		</router-link>
+	</div>
+	<div>
 		<router-link to="/client/kills-table">
 			<button>client kills table</button>
 		</router-link>

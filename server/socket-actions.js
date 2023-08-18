@@ -1,8 +1,9 @@
-const { killsPath, sqInfoPath } = require("./files.js");
+const { killsPath, sqInfoPath, oneDayTablePath } = require("./files.js");
 const fs = require('fs');
 
 let killsTable = JSON.parse(fs.readFileSync(killsPath));
 let finalTable = JSON.parse(fs.readFileSync(sqInfoPath));
+let standings = JSON.parse(fs.readFileSync(oneDayTablePath));
 
 let positionPoints = {
 	1: 15,
@@ -23,8 +24,12 @@ function writeFinalTable() {
 	fs.writeFileSync(sqInfoPath, JSON.stringify(finalTable, null, 4));
 }
 
+function writeStandings() {
+	fs.writeFileSync(oneDayTablePath, JSON.stringify(standings, null, 4));
+}
+
 function killTableToFinalTableIdx(killTableIdx) {
-	const squadName = killsTable[killTableIdx].squadName
+	const squadName = killsTable[killTableIdx].squadName;
 	for(let i = 0; i < finalTable.length; i++) {
 		if(finalTable[i].squadName === squadName) {
 			return i;
@@ -52,31 +57,44 @@ function actions(io, socket) {
 			killsTable[killerIdx].points += 1;
 			finalTable[idx].points += 1;
 			finalTable[idx].fin += 1;
+
+			standings[idx].points += 1;
+			standings[idx].fin += 1;
 		}
 		killsTable[victimIdx].alive -= 1;
 
 		if(killsTable[victimIdx].alive === 0) {
 			if((victimIdx + 1) <= 12) {
-				finalTable[killTableToFinalTableIdx(victimIdx)].points += positionPoints[victimIdx + 1];
+				let idx = killTableToFinalTableIdx(victimIdx);
+				finalTable[idx].points += positionPoints[victimIdx + 1];
+				standings[idx].points += positionPoints[victimIdx + 1];
 			}
 			if(isGameOver()) {
 				const idx = killTableToFinalTableIdx(killerIdx);
 				finalTable[idx].points += positionPoints[killerIdx + 1];
 				finalTable[idx].wwcd += 1;
+
+				standings[idx].points += positionPoints[killerIdx + 1];
+				standings[idx].wwcd += 1;
 			}
 
 			finalTable.sort((a, b) => b.points - a.points);
+			standings.sort((a, b) => b.points - a.points);
 			let rank = killTableToFinalTableIdx(victimIdx) + 1;
 			let squadName = killsTable[victimIdx].squadName;
 			let kills = killsTable[victimIdx].points;
 			let finalPoints = finalTable[rank - 1].points;
 			io.to('kills').emit('eliminated', rank, squadName, kills, finalPoints);
 		}
-
 		killsTable.sort((a, b) => b.points - a.points);
 		finalTable.sort((a, b) => b.points - a.points);
+		standings.sort((a, b) => b.points - a.points);
 		writeKillsTable();
 		writeFinalTable();
+		writeStandings();
+	});
+
+	socket.on('reset-final-table', () => {
 	});
 	
 	socket.on('get-kills-table', () => {

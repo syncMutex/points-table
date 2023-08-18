@@ -41,3 +41,19 @@ export async function GET(url: string, msg?: Ref<any>) {
 		return null;
 	}
 }
+
+export async function DELETE(url: string, msg?: Ref<any>) {
+	try{
+		const res = await fetch(U(url), {
+			method: "DELETE",
+			headers: { 'Content-Type': "application/json" }
+		});
+		const data = await res.json();
+		return data;
+	} catch(e) {
+		if(msg) {
+			msg.value = `${e}`;	
+		}
+		return null;
+	}
+}

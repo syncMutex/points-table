@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import { socket } from "../socket.ts";
-import banner from "../assets/banner.jpg";
+import logo from "../assets/logo-2.png";
+import video from "../assets/kill-table-video.mp4";
 
 class Squad {
 	img: any;
 	squadName: string;
 	points: number = 0;
 	alive: number = 4;
+	rank: number = 0;
 
 	constructor(squadName: string, img: any) {
 		this.squadName = squadName;
@@ -27,13 +29,20 @@ interface S {
 
 const squads = ref<Array<Squad>>(new Array(0));
 const deadSquads = computed<Array<Squad>>(() => {
-	const a = squads.value.filter(s => s.alive <= 0);
+	let i = 1;
+	const a = squads.value.filter((s) => {
+		if(s.alive > 0) {
+			s.rank = i;
+			i++;
+		}
+		return s.alive <= 0;
+	});
 	return a;
 });
 const selected = ref<[S, S]>([{ rank:-1, sq: null }, { rank:-1, sq: null }]);
 const curSel = ref(0);
 const autoClear = ref(true);
-const eliminated = ref({rank: -1, squadName: '', kills: -1, finalPoints: -1});
+const eliminated = ref({rank: -1, squadName: '', kills: -1, finalPoints: -1, img: null});
 const isShow = ref(false);
 
 function selectTeam(idx: number) {
@@ -51,13 +60,13 @@ function clear() {
 	selected.value = selected.value.map(_ => ({ rank: -1, sq: null } as S)) as [S, S];
 }
 
-function showEliminated(s: { rank: number, squadName: string, kills: number, finalPoints: number }) {
+function showEliminated(s: { rank: number, squadName: string, kills: number, finalPoints: number, img: any }) {
 	eliminated.value = s;
 	isShow.value = true;
 	setTimeout(() => {
 		isShow.value = false;
 		setTimeout(() => {
-			eliminated.value = {rank: -1, squadName: '', kills: -1, finalPoints: -1};
+			eliminated.value = {rank: -1, squadName: '', kills: -1, finalPoints: -1, img: null};
 		}, 500);
 	}, 5000);
 }
@@ -90,11 +99,18 @@ onMounted(async () => {
 			a.points = s.points;
 			return a;
 		});
+		eliminated.value = {rank: 12, squadName: 'JEEVAN BRO', kills: 99, finalPoints: 2, img: squads.value[0].img};
 	})
 	socket.emit('get-kills-table');
 
 	socket.on('eliminated', (rank: number, squadName: string, kills: number, finalPoints: number) => {
-		showEliminated({rank, squadName, kills, finalPoints});
+		let img: any = null;
+		for(let i = 0; i < squads.value.length; i++) {
+			if(squadName === squads.value[i].squadName) {
+				img = squads.value[i].img;
+			}
+		}
+		showEliminated({rank, squadName, kills, finalPoints, img});
 	});
 });
 
@@ -108,14 +124,17 @@ onUnmounted(() => {
 <div class="whole-page">
 	<section id="kill-section">
 		<div class="header">
-			<img :src="banner" alt="">
+			<video autoplay loop muted>
+				<source :src="video" type="video/mp4">
+				Your browser does not support the video tag.
+			</video>
 		</div>
 		<div class="teams">
 			<div 
 				:class="['team', squad.alive <= 0 ? 'display-none' : '']" 
 				v-for="(squad, index) in squads" @click="selectTeam(index)" :key="index"
 			>
-				<div class="rank">#{{index + 1}}</div>
+				<div class="rank">#{{squad.rank}}</div>
 				<div :class="['name-img']">
 					<div class="img-container"><img :src="squad.img" alt=""></div>
 					<div class="squad-name">{{squad.squadName}}</div>
@@ -141,6 +160,7 @@ onUnmounted(() => {
 	</section>
 
 	<div>
+		<div class="reset-btn"><button @click="reset">reset</button></div>
 		<section id="input-section">
 			<button @click="clear">clear</button>
 
@@ -180,16 +200,21 @@ onUnmounted(() => {
 				</div>
 			</div>
 
-			<div><button @click="reset">reset</button></div>
 		</section>
 
 		<div class="eliminated-box">
 			<div :class="['eliminated-container', isShow ? 'show' : '']">
-				Eliminated
-				<div>{{eliminated.squadName}}</div>
-				<div>rank: {{eliminated.rank}}</div>
-				<div>points: {{eliminated.finalPoints}}</div>
-				<div>finishes: {{eliminated.kills}}</div>
+				<div class="el-name-img">
+					<div class="img"><img :src="eliminated.img || ''" alt=""/></div>
+					<div class="finished-on">
+						<div class="erank">FINISHED ON <span style="color: yellow; font-size: 2rem;">#{{ eliminated.rank }}</span></div>
+						<div class="esquad-name">{{ eliminated.squadName }}</div>
+					</div>
+				</div>
+				<div class="finishes-logo">
+					<div class="kills">TOTAL FINISHES {{ eliminated.kills }}</div>
+					<div class="logo"><img :src="logo" alt=""></div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -197,6 +222,73 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.eliminated-container > div{
+	display: flex;
+	flex-direction: row;
+}
+
+.el-name-img{
+	width: 100%;
+	height: 60%;
+	background-color: red;
+}
+
+.el-name-img .img{
+	width: 9rem;
+	height: 100%;
+	background-color: rgb(255, 255, 255);
+}
+
+.el-name-img .img img{
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+.finished-on{
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background-color: rgb(30, 30, 30);
+	color: white;
+	width: 100%;
+}
+
+.finishes-logo{
+	background-color: blueviolet;
+	height: 40%;
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+}
+
+.finishes-logo > div{
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.5rem;
+}
+
+.finishes-logo > .logo{
+	width: 50%;
+	background-color: rgb(28, 28, 28);
+	padding: 0.5rem;
+}
+
+.finishes-logo > .logo img{
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+.finished-on > div{
+	font-size: 2rem;
+}
+
 input[type="text"]{
 	height: 1.5rem;
 	width: 10rem;
@@ -247,7 +339,7 @@ button{
 	background-color: rgb(20, 20, 20);
 }
 
-.header img {
+.header > * {
 	width: 100%;
 	height: 100%;
 	object-fit: contain;
@@ -379,10 +471,11 @@ button{
 }
 
 .eliminated-box{
-	width: 15rem;
-	height: 8rem;
+	width: 22rem;
+	height: 10rem;
 	background-color: rgb(0, 255, 0);
 	margin: 2rem 0 0 3rem;
+	border: 2px solid rgb(0, 255, 0);
 }
 
 .eliminated-container{
@@ -392,10 +485,14 @@ button{
 	color: white;
 	display: flex;
 	flex-direction: column;
-	align-items: center;
-	justify-content: center;
 	opacity: 0;
 	transition: all 0.3s;
+}
+
+.reset-btn{
+	position: fixed;
+	top: 0;
+	right: 0;
 }
 
 .eliminated-container.show{
