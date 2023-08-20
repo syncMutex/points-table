@@ -99,6 +99,7 @@ onMounted(async () => {
 			a.points = s.points;
 			return a;
 		});
+		// for(let i = 0; i < 20; i++) squads.value.push(new Squad("sadsada", squads.value[0].img))
 		eliminated.value = {rank: 12, squadName: 'JEEVAN BRO', kills: 99, finalPoints: 2, img: squads.value[0].img};
 	})
 	socket.emit('get-kills-table');
@@ -256,7 +257,8 @@ onUnmounted(() => {
 }
 
 .finishes-logo{
-	background-color: blueviolet;
+	background-color: rgb(255, 247, 0);
+	color: black;
 	height: 40%;
 	display: flex;
 	flex-direction: row;

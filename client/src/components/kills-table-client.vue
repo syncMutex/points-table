@@ -59,6 +59,14 @@ onMounted(async () => {
 		});
 		eliminated.value = {rank: 12, squadName: 'JEEVAN BRO', kills: 99, finalPoints: 2, img: squads.value[0].img};
 	})
+
+	socket.on("kill", (killerIdx: number, victimIdx: number) => {
+		squads.value[victimIdx].kill();
+		if(killerIdx !== victimIdx) {
+			squads.value[killerIdx].points += 1;
+		}
+		squads.value.sort((a, b) => b.points - a.points);
+	})
 	socket.emit('get-kills-table');
 
 	socket.on('eliminated', (rank: number, squadName: string, kills: number, finalPoints: number) => {
@@ -75,6 +83,7 @@ onMounted(async () => {
 onUnmounted(() => {
 	socket.off('get-kills-table-res');
 	socket.off('eliminated');
+	socket.off("kill");
 })
 </script>
 
@@ -174,7 +183,7 @@ onUnmounted(() => {
 }
 
 .finishes-logo{
-	background-color: blueviolet;
+	background-color: rgb(255, 247, 0);
 	height: 40%;
 	display: flex;
 	flex-direction: row;
