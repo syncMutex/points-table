@@ -42,7 +42,7 @@ const deadSquads = computed<Array<Squad>>(() => {
 const selected = ref<[S, S]>([{ rank:-1, sq: null }, { rank:-1, sq: null }]);
 const curSel = ref(0);
 const autoClear = ref(true);
-const eliminated = ref({rank: -1, squadName: '', kills: -1, finalPoints: -1, img: null});
+const eliminated = ref({rank: -1, squadName: '', kills: -1, img: null});
 const isShow = ref(false);
 
 function selectTeam(idx: number) {
@@ -60,13 +60,13 @@ function clear() {
 	selected.value = selected.value.map(_ => ({ rank: -1, sq: null } as S)) as [S, S];
 }
 
-function showEliminated(s: { rank: number, squadName: string, kills: number, finalPoints: number, img: any }) {
+function showEliminated(s: { rank: number, squadName: string, kills: number, img: any }) {
 	eliminated.value = s;
 	isShow.value = true;
 	setTimeout(() => {
 		isShow.value = false;
 		setTimeout(() => {
-			eliminated.value = {rank: -1, squadName: '', kills: -1, finalPoints: -1, img: null};
+			eliminated.value = {rank: -1, squadName: '', kills: -1, img: null};
 		}, 500);
 	}, 5000);
 }
@@ -99,19 +99,19 @@ onMounted(async () => {
 			a.points = s.points;
 			return a;
 		});
-		// for(let i = 0; i < 20; i++) squads.value.push(new Squad("sadsada", squads.value[0].img))
-		eliminated.value = {rank: 12, squadName: 'JEEVAN BRO', kills: 99, finalPoints: 2, img: squads.value[0].img};
+		// for(let i = 0; i < 20; i++) squads.value.push(new Squad("sadsada", squads.value[0]?.img || ''))
+		eliminated.value = {rank: 12, squadName: 'JEEVAN BRO', kills: 99, img: squads.value[0]?.img || ''};
 	})
 	socket.emit('get-kills-table');
 
-	socket.on('eliminated', (rank: number, squadName: string, kills: number, finalPoints: number) => {
+	socket.on('eliminated', (rank: number, squadName: string, kills: number) => {
 		let img: any = null;
 		for(let i = 0; i < squads.value.length; i++) {
 			if(squadName === squads.value[i].squadName) {
 				img = squads.value[i].img;
 			}
 		}
-		showEliminated({rank, squadName, kills, finalPoints, img});
+		showEliminated({rank, squadName, kills, img});
 	});
 });
 
@@ -257,8 +257,8 @@ onUnmounted(() => {
 }
 
 .finishes-logo{
-	background-color: rgb(255, 247, 0);
-	color: black;
+	background-color: red;
+	color: white;
 	height: 40%;
 	display: flex;
 	flex-direction: row;
@@ -310,12 +310,15 @@ button{
 .whole-page {
 	display: flex;
 	flex-direction: row;
+	width: 100%;
+	height: 100%;
+	position: relative;
 }
 
 #kill-section{
-	margin: 5% 0 0 5%;
 	width: 16rem;
-	height: 40rem;
+	height: 90%;
+	position: relative;
 	background-color: rgb(50, 50, 50);
 	overflow: hidden;
 	font-family: Verdana, Geneva, Tahoma, sans-serif;
@@ -349,7 +352,7 @@ button{
 	
 .teams{
 	width: 100%;
-	height: calc(40rem - 5rem);
+	height: calc(100% - 5rem);
 	display: flex;
 	flex-direction: column;
 	overflow: auto;

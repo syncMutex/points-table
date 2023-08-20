@@ -6,7 +6,6 @@ class Squad {
 	img: any;
 	squadName: string;
 	wwcd: number = 0;
-	pla: number = 0;
 	fin: number = 0;
 	points: number = 0;
 

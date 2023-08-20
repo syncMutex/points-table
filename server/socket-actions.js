@@ -80,11 +80,13 @@ function actions(io, socket) {
 
 			finalTable.sort((a, b) => b.points - a.points);
 			standings.sort((a, b) => b.points - a.points);
-			let rank = killTableToFinalTableIdx(victimIdx) + 1;
+			let rank = killsTable.reduce((acc, current) => {
+				if(current.alive > 0) return acc + 1;	
+				return acc;
+			}, 0) + 1;
 			let squadName = killsTable[victimIdx].squadName;
 			let kills = killsTable[victimIdx].points;
-			let finalPoints = finalTable[rank - 1].points;
-			io.to('kills').emit('eliminated', rank, squadName, kills, finalPoints);
+			io.to('kills').emit('eliminated', rank, squadName, kills);
 		}
 		killsTable.sort((a, b) => b.points - a.points);
 		finalTable.sort((a, b) => b.points - a.points);
@@ -94,9 +96,6 @@ function actions(io, socket) {
 		writeStandings();
 	});
 
-	socket.on('reset-final-table', () => {
-	});
-	
 	socket.on('get-kills-table', () => {
 		let squads = killsTable.map(s => {
 			s = {...s};

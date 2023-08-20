@@ -35,16 +35,17 @@ const deadSquads = computed<Array<Squad>>(() => {
 	});
 	return a;
 });
-const eliminated = ref({rank: -1, squadName: '', kills: -1, finalPoints: -1, img: null});
+const eliminated = ref({rank: -1, squadName: '', kills: -1, img: null});
 const isShow = ref(false);
+const showDeadIdx = ref(new Set<number>());
 
-function showEliminated(s: { rank: number, squadName: string, kills: number, finalPoints: number, img: any }) {
+function showEliminated(s: { rank: number, squadName: string, kills: number, img: any }) {
 	eliminated.value = s;
 	isShow.value = true;
 	setTimeout(() => {
 		isShow.value = false;
 		setTimeout(() => {
-			eliminated.value = {rank: -1, squadName: '', kills: -1, finalPoints: -1, img: null};
+			eliminated.value = {rank: -1, squadName: '', kills: -1, img: null};
 		}, 500);
 	}, 5000);
 }
@@ -57,10 +58,12 @@ onMounted(async () => {
 			a.points = s.points;
 			return a;
 		});
-		eliminated.value = {rank: 12, squadName: 'JEEVAN BRO', kills: 99, finalPoints: 2, img: squads.value[0].img};
+		eliminated.value = {rank: 12, squadName: 'JEEVAN BRO', kills: 99, img: squads.value[0]?.img || ''};
 	})
 
 	socket.on("kill", (killerIdx: number, victimIdx: number) => {
+		showDeadIdx.value.add(victimIdx);
+		setTimeout(() => { showDeadIdx.value.delete(victimIdx) }, 400);
 		squads.value[victimIdx].kill();
 		if(killerIdx !== victimIdx) {
 			squads.value[killerIdx].points += 1;
@@ -69,14 +72,14 @@ onMounted(async () => {
 	})
 	socket.emit('get-kills-table');
 
-	socket.on('eliminated', (rank: number, squadName: string, kills: number, finalPoints: number) => {
+	socket.on('eliminated', (rank: number, squadName: string, kills: number) => {
 		let img: any = null;
 		for(let i = 0; i < squads.value.length; i++) {
 			if(squadName === squads.value[i].squadName) {
 				img = squads.value[i].img;
 			}
 		}
-		showEliminated({rank, squadName, kills, finalPoints, img});
+		showEliminated({rank, squadName, kills, img});
 	});
 });
 
@@ -102,7 +105,7 @@ onUnmounted(() => {
 				v-for="(squad, index) in squads" :key="index"
 			>
 				<div class="rank">#{{squad.rank}}</div>
-				<div :class="['name-img']">
+				<div :class="['name-img', showDeadIdx.has(index) ? 'show-dead' : '']">
 					<div class="img-container"><img :src="squad.img" alt=""></div>
 					<div class="squad-name">{{squad.squadName}}</div>
 				</div>
@@ -149,6 +152,14 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.show-dead{
+	background-color: red !important;
+}
+
+.show-dead > *{
+	color: white !important;
+}
+
 .eliminated-container > div{
 	display: flex;
 	flex-direction: row;
@@ -183,7 +194,8 @@ onUnmounted(() => {
 }
 
 .finishes-logo{
-	background-color: rgb(255, 247, 0);
+	background-color: red;
+	color: white;
 	height: 40%;
 	display: flex;
 	flex-direction: row;
@@ -235,12 +247,15 @@ button{
 .whole-page {
 	display: flex;
 	flex-direction: row;
+	width: 100%;
+	height: 100%;
+	position: relative;
 }
 
 #kill-section{
-	margin: 5% 0 0 5%;
 	width: 16rem;
-	height: 40rem;
+	height: 90%;
+	position: relative;
 	background-color: rgb(50, 50, 50);
 	overflow: hidden;
 	font-family: Verdana, Geneva, Tahoma, sans-serif;
@@ -253,6 +268,11 @@ button{
 	flex-direction: row;
 	width: 7rem;
 	padding: 0.2rem;
+	transition: 0.5s all;
+}
+
+.name-img > *{
+	transition: 0.5s all;
 }
 
 .eliminated{
@@ -274,7 +294,7 @@ button{
 	
 .teams{
 	width: 100%;
-	height: calc(40rem - 5rem);
+	height: calc(100% - 5rem);
 	display: flex;
 	flex-direction: column;
 	overflow: auto;
@@ -416,8 +436,13 @@ button{
 	transition: all 0.3s;
 }
 
+.reset-btn{
+	position: fixed;
+	top: 0;
+	right: 0;
+}
+
 .eliminated-container.show{
 	opacity: 1;
 }
 </style>
-
