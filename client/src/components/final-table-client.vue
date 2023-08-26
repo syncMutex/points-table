@@ -106,6 +106,7 @@ onMounted(async () => {
 	align-items: center;
 	background-color: rgba(0, 0, 0, 0.7);
 	color: white;
+	border-bottom: 1px solid white;
 }
 
 .points-table-row.header > .squad-name {
@@ -122,7 +123,7 @@ onMounted(async () => {
 }
 
 .image-container img {
-	padding: 10%;
+	padding: 5%;
 }
 
 .image-container img {

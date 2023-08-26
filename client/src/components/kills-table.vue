@@ -38,26 +38,17 @@ const deadSquads = computed<Array<Squad>>(() => {
 		return s.alive <= 0;
 	});
 	return a;
-});
-const selected = ref<[S, S]>([{ rank:-1, sq: null }, { rank:-1, sq: null }]);
+})
+const selected = ref<S>({ rank:-1, sq: null });
 const curSel = ref(0);
-const autoClear = ref(true);
 const eliminated = ref({rank: -1, squadName: '', kills: -1, img: null});
 const isShow = ref(false);
+const points = ref(0);
 
 function selectTeam(idx: number) {
-	if(curSel.value === -1) return;
-	selected.value[curSel.value].rank = idx + 1;
-	selected.value[curSel.value].sq = squads.value[idx];
-
-	if(selected.value[0].rank === -1) curSel.value = 0;
-	else if(selected.value[1].rank === -1) curSel.value = 1;
-	else curSel.value = -1;
-}
-
-function clear() {
 	curSel.value = 0;
-	selected.value = selected.value.map(_ => ({ rank: -1, sq: null } as S)) as [S, S];
+	selected.value.rank = idx + 1;
+	selected.value.sq = squads.value[idx];
 }
 
 function showEliminated(s: { rank: number, squadName: string, kills: number, img: any }) {
@@ -69,21 +60,6 @@ function showEliminated(s: { rank: number, squadName: string, kills: number, img
 			eliminated.value = {rank: -1, squadName: '', kills: -1, img: null};
 		}, 500);
 	}, 5000);
-}
-
-function kill() {
-	if(selected.value[0].rank === -1 || selected.value[1].rank === -1) return;
-	socket.emit("kill", selected.value[0].rank - 1, selected.value[1].rank - 1);
-	selected.value[1].sq?.kill();
-	if(selected.value[0].sq !== null && selected.value[1].sq !== null) {
-		if(selected.value[0].rank !== selected.value[1].rank) {
-			selected.value[0].sq.points += 1;
-		}
-	}
-	if(autoClear.value) {
-		clear();
-	}
-	squads.value.sort((a, b) => b.points - a.points);
 }
 
 function reset() {
@@ -99,7 +75,6 @@ onMounted(async () => {
 			a.points = s.points;
 			return a;
 		});
-		// for(let i = 0; i < 20; i++) squads.value.push(new Squad("sadsada", squads.value[0]?.img || ''))
 		eliminated.value = {rank: 12, squadName: 'JEEVAN BRO', kills: 99, img: squads.value[0]?.img || ''};
 	})
 	socket.emit('get-kills-table');
@@ -114,6 +89,20 @@ onMounted(async () => {
 		showEliminated({rank, squadName, kills, img});
 	});
 });
+
+function setAlive(count: number) {
+	if(selected.value.sq)
+		selected.value.sq.alive = count;
+
+	socket.emit("set-alive", selected.value.sq?.squadName, count);
+}
+
+function setPoints() {
+	if(selected.value.sq == null) return;
+	selected.value.sq.points = points.value;
+	squads.value.sort((a, b) => b.points - a.points);
+	socket.emit("set-points", selected.value.sq?.squadName, points.value);
+}
 
 onUnmounted(() => {
 	socket.off('get-kills-table-res');
@@ -163,44 +152,27 @@ onUnmounted(() => {
 	<div>
 		<div class="reset-btn"><button @click="reset">reset</button></div>
 		<section id="input-section">
-			<button @click="clear">clear</button>
-
-			<span style="margin-left: 1rem">autoclear: </span><input type="checkbox" v-model="autoClear">
-			<div :class="['selected-team', curSel === 0 ? 'highlight' : '']" @click="() => {
-				curSel = 0;
-				selected[0].rank = -1;
-				selected[0].sq = null;
-			}">
+			<div :class="['selected-team']">
 				<div class="team">
-					<div class="rank">#{{selected[0].rank}}</div>
-					<div class="img-container"><img :src="selected[0].sq?.img" alt=""></div>
-					<div class="squad-name">{{selected[0].sq?.squadName}}</div>
-					<div class="points">{{selected[0].sq?.points}}</div>
+					<div class="rank">#{{selected?.rank}}</div>
+					<div class="img-container"><img :src="selected.sq?.img" alt=""></div>
+					<div class="squad-name">{{selected.sq?.squadName}}</div>
+					<div class="points">{{selected.sq?.points}}</div>
 					<div class="alive-states">
-						<div v-for="i in 4" :class="['dead-box', (i <= (selected[0].sq?.alive || 0)) ? 'alive' : '']"></div>
+						<div v-for="i in 4" :class="['dead-box', (i <= (selected.sq?.alive || 0)) ? 'alive' : '']"></div>
 					</div>
 				</div>
 			</div>
 			<div class="control-btns">
-				<button :disabled="selected[0].rank === -1 || selected[1].rank === -1"
-					style="color: white; width: 6rem; height: 2rem;" @click="kill">killed</button>
 			</div>
-			<div :class="['selected-team', curSel === 1 ? 'highlight' : '']" @click="() => {
-				curSel = 1;
-				selected[1].rank = -1;
-				selected[1].sq = null;
-			}">
-				<div class="team">
-					<div class="rank">#{{selected[1].rank}}</div>
-					<div class="img-container"><img :src="selected[1].sq?.img" alt=""></div>
-					<div class="squad-name">{{selected[1].sq?.squadName}}</div>
-					<div class="points">{{selected[1].sq?.points}}</div>
-					<div class="alive-states">
-						<div v-for="i in 4" :class="['dead-box', (i <= (selected[1].sq?.alive || 0)) ? 'alive' : '']"></div>
-					</div>
+			<div>
+				points: <input type="number" v-model="points" @keypress.enter="setPoints"/>
+				<br />
+				<br />
+				<div>
+					<button :disabled="selected.rank === -1" v-for="i in 5" @click="setAlive(i - 1)">{{i - 1}}</button>
 				</div>
 			</div>
-
 		</section>
 
 		<div class="eliminated-box">

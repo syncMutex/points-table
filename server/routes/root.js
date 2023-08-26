@@ -53,6 +53,39 @@ router.delete("/reset-final-table", (_, res) => {
 	res.json({ err: false, msg: "reset success" });
 });
 
+
+class Squad {
+	img = '';
+	squadName = '';
+	wwcd = 0;
+	fin = 0;
+	points = 0;
+
+	constructor(squadName, img) {
+		this.squadName = squadName;
+		this.img = img;
+	}
+}
+
+router.get("/load-from-dir", (_, res) => {
+	const files = fs.readdirSync("./teams", { withFileTypes: true })
+					.map((item) => new Squad(item.name.split(".")[0], `./teams/${item.name}`));
+	try{
+		const squads = files.map(squad => {
+			const fp = `data/images/${squad.squadName}`;
+			fs.writeFileSync(fp, `data:image/jpeg;base64,` + fs.readFileSync(squad.img, 'base64'));
+			squad.img = fp;
+			return squad;
+		});
+		fs.writeFileSync(sqInfoPath, JSON.stringify(squads, null, 4));
+		fs.writeFileSync(oneDayTablePath, JSON.stringify(squads, null, 4));
+		res.json({ err: false, msg: "success" });
+	} catch(e) {
+		res.json({ err: true, msg: e });
+		throw e;
+	}
+});
+
 router.get("/standings", (_, res) => {
 	const squads = JSON.parse(fs.readFileSync(oneDayTablePath));
 	const squadsWithImages = squads.map(s => {

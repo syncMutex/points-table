@@ -61,15 +61,6 @@ onMounted(async () => {
 		eliminated.value = {rank: 12, squadName: 'JEEVAN BRO', kills: 99, img: squads.value[0]?.img || ''};
 	})
 
-	socket.on("kill", (killerIdx: number, victimIdx: number) => {
-		showDeadIdx.value.add(victimIdx);
-		setTimeout(() => { showDeadIdx.value.delete(victimIdx) }, 400);
-		squads.value[victimIdx].kill();
-		if(killerIdx !== victimIdx) {
-			squads.value[killerIdx].points += 1;
-		}
-		squads.value.sort((a, b) => b.points - a.points);
-	})
 	socket.emit('get-kills-table');
 
 	socket.on('eliminated', (rank: number, squadName: string, kills: number) => {
@@ -81,12 +72,44 @@ onMounted(async () => {
 		}
 		showEliminated({rank, squadName, kills, img});
 	});
+
+	socket.on("set-alive", (squadName: string, count: number) => {
+		for(let sq of squads.value) {
+			if(sq.squadName === squadName) {
+				sq.alive = count;
+				if(count === 0) {
+					let img: any = null;
+					let kills: any = null;
+					for(let i = 0; i < squads.value.length; i++) {
+						if(squadName === squads.value[i].squadName) {
+							img = squads.value[i].img;
+							kills = squads.value[i].points;
+						}
+					}
+					showEliminated({rank: squads.value.length - deadSquads.value.length + 1, squadName, kills, img});
+				}
+				break;
+			}
+		}
+	})
+
+	socket.on("set-points", (squadName: string, count: number) => {
+		for(let sq of squads.value) {
+			if(sq.squadName === squadName) {
+				sq.points = count;
+				break;
+			}
+		}
+		squads.value.sort((a, b) => b.points - a.points);
+	})
 });
 
 onUnmounted(() => {
 	socket.off('get-kills-table-res');
 	socket.off('eliminated');
 	socket.off("kill");
+	socket.off("set-alive");
+	socket.off("set-points");
 })
 </script>
 

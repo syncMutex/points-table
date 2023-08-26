@@ -66,6 +66,11 @@ function deleteCurSquad() {
 	squads.value.splice(r - 1, 1);
 }
 
+async function loadFromFolder() {
+	await GET("/api/load-from-dir");
+	squads.value = await GET("/api/squads", msg);
+}
+
 async function saveToServer() {
 	await POST("/api/save-squads", squads.value, msg);
 }
@@ -115,6 +120,7 @@ onMounted(async () => {
 			<div class="save-to-server">
 				<button @click="saveToServer">save to server</button>
 			</div>
+			<div class="load"><button @click="loadFromFolder">load from folder</button></div>
 			<div>{{msg}}</div>
 		</section>
 	</div>
@@ -136,6 +142,12 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.load{
+	position: fixed;
+	right: 0;
+	top: 0;
+}
+
 .table{
 	display: flex;
 	flex-direction: row;

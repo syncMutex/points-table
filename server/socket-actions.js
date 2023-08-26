@@ -20,79 +20,75 @@ function writeKillsTable() {
 	fs.writeFileSync(killsPath, JSON.stringify(killsTable, null, 4));
 }
 
-function writeFinalTable() {
-	fs.writeFileSync(sqInfoPath, JSON.stringify(finalTable, null, 4));
-}
+// function writeFinalTable() {
+// 	fs.writeFileSync(sqInfoPath, JSON.stringify(finalTable, null, 4));
+// }
 
 function writeStandings() {
 	fs.writeFileSync(oneDayTablePath, JSON.stringify(standings, null, 4));
 }
 
-function killTableToFinalTableIdx(killTableIdx) {
-	const squadName = killsTable[killTableIdx].squadName;
-	for(let i = 0; i < finalTable.length; i++) {
-		if(finalTable[i].squadName === squadName) {
+function killsTableIdx(squadName) {
+	for(let i = 0; i < killsTable.length; i++) {
+		if(killsTable[i].squadName === squadName) {
 			return i;
 		}
 	}
+	return -1;
 }
 
-function isGameOver() {
-	let alive = 0;
-	for(let i = 0; i < killsTable.length; i++) {
-		if(killsTable[i].alive) alive++;
-		if(alive >= 2) return false;
+// function finalTableIdx(squadName) {
+// 	for(let i = 0; i < finalTable.length; i++) {
+// 		if(finalTable[i].squadName === squadName) {
+// 			return i;
+// 		}
+// 	}
+// 	return -1;
+// }
+
+function standingsIdx(squadName) {
+	for(let i = 0; i < standings.length; i++) {
+		if(standings[i].squadName === squadName) {
+			return i;
+		}
 	}
-	return true;
+	return -1;
 }
 
-function actions(io, socket) {
+function actions(_, socket) {
 	socket.join('kills');
 
-	socket.on('kill', (killerIdx, victimIdx) => {
-		socket.to('kills').emit('kill', killerIdx, victimIdx);
+	socket.on("set-alive", (squadName, count) => {
+		const idx = killsTableIdx(squadName);
+		if(idx === -1) return;
+		killsTable[idx].alive = count;
+		socket.to('kills').emit("set-alive", squadName, count);
+	});
 
-		const idx = killTableToFinalTableIdx(killerIdx);
-		if(killerIdx !== victimIdx) {
-			killsTable[killerIdx].points += 1;
-			finalTable[idx].points += 1;
-			finalTable[idx].fin += 1;
-
-			standings[idx].points += 1;
-			standings[idx].fin += 1;
-		}
-		killsTable[victimIdx].alive -= 1;
-
-		if(killsTable[victimIdx].alive === 0) {
-			if((victimIdx + 1) <= 12) {
-				let idx = killTableToFinalTableIdx(victimIdx);
-				finalTable[idx].points += positionPoints[victimIdx + 1];
-				standings[idx].points += positionPoints[victimIdx + 1];
-			}
-			if(isGameOver()) {
-				const idx = killTableToFinalTableIdx(killerIdx);
-				finalTable[idx].points += positionPoints[killerIdx + 1];
-				finalTable[idx].wwcd += 1;
-
-				standings[idx].points += positionPoints[killerIdx + 1];
-				standings[idx].wwcd += 1;
-			}
-
-			finalTable.sort((a, b) => b.points - a.points);
-			standings.sort((a, b) => b.points - a.points);
-			let rank = killsTable.reduce((acc, current) => {
-				if(current.alive > 0) return acc + 1;	
-				return acc;
-			}, 0) + 1;
-			let squadName = killsTable[victimIdx].squadName;
-			let kills = killsTable[victimIdx].points;
-			io.to('kills').emit('eliminated', rank, squadName, kills);
-		}
+	socket.on("set-points", (squadName, val) => {
+		let idx = killsTableIdx(squadName);
+		if(idx === -1) return;
+		killsTable[idx].points = val;
 		killsTable.sort((a, b) => b.points - a.points);
-		finalTable.sort((a, b) => b.points - a.points);
+
+		idx = standingsIdx(squadName);
+		if(idx === -1) return;
+		standings[idx].points = val;
 		standings.sort((a, b) => b.points - a.points);
+
+		socket.to('kills').emit("set-points", squadName, val);
 		writeKillsTable();
-		writeFinalTable();
+		writeStandings();
+	});
+
+	socket.on("set-standings-fin-points", (squadName, fin, points) => {
+		const idx = standingsIdx(squadName);
+		if(idx === -1) return;
+		standings[idx].points = points;
+		standings[idx].fin = fin;
+		standings.sort((a, b) => b.points - a.points);
+
+		writeKillsTable();
 		writeStandings();
 	});
 

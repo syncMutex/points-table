@@ -29,17 +29,12 @@ function selectTeam(idx: number) {
 }
 
 async function reset() {
-	DELETE("/api/reset-final-table", msg);
+	await DELETE("/api/reset-final-table", msg);
 	squads.value = await GET("/api/squads", msg);
 }
 
-// async function saveToServer() {
-// 	await POST("/api/save-squads", squads.value, msg);
-// }
-
 onMounted(async () => {
 	squads.value = await GET("/api/squads", msg);
-	// for(let i = 0; i < 20; i++) squads.value.push(new Squad("aaa", ''))
 });
 </script>
 
@@ -146,6 +141,7 @@ onMounted(async () => {
 	align-items: center;
 	background-color: rgba(0, 0, 0, 0.7);
 	color: white;
+	border-bottom: 1px solid white;
 }
 
 .points-table-row.header > .squad-name {
@@ -162,7 +158,7 @@ onMounted(async () => {
 }
 
 .image-container img {
-	padding: 10%;
+	padding: 5%;
 }
 
 .image-container img {
